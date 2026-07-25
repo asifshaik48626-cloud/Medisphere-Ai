@@ -1,4 +1,4 @@
-from .guideline_retrieval import GuidelineRetrievalService
+from .guideline_retrieval import GuidelineRetrieval
 
 class GuidelinesRagChat:
     @classmethod
@@ -7,7 +7,7 @@ class GuidelinesRagChat:
         Answers clinician questions grounded in the CDC/WHO Guidelines library.
         """
         # 1. Search guidelines context chunks matching query
-        chunks = GuidelineRetrievalService.search(question)
+        chunks = GuidelineRetrieval.retrieve(question)
         
         if not chunks:
             return {
@@ -20,14 +20,14 @@ class GuidelinesRagChat:
         sources = []
         for index, chunk in enumerate(chunks, 1):
             context_snippets.append(
-                f"[{index}] (Source: {chunk['publisher']}, Evidence Level: {chunk['evidence_level']}): "
-                f"{chunk['text']}"
+                f"[{index}] (Source: {chunk['source']}, Evidence Level: {chunk['evidence_level']}): "
+                f"{chunk['content']}"
             )
             sources.append({
-                "title": f"Guideline Chunk #{chunk['id'][:8]}",
-                "publisher": chunk['publisher'],
+                "title": f"Guideline Chunk #{index}",
+                "publisher": chunk['source'],
                 "evidence_level": chunk['evidence_level'],
-                "recommendation_strength": chunk['recommendation_strength']
+                "category": chunk['category']
             })
             
         # 3. Build grounded clinical answer
