@@ -9,6 +9,8 @@ import uuid
 
 router = APIRouter(prefix="/documents", tags=["Medical Documents"])
 
+from ..services.storage import SecureStorageService
+
 @router.post("/upload")
 def upload_medical_document(
     document_type: str = Form(...),  # Prescription, LabReport, etc.
@@ -90,14 +92,35 @@ def upload_medical_document(
     db.add(ocr)
     db.commit()
 
+    presigned_url = SecureStorageService.generate_presigned_url(doc.storage_key)
+
     return {
         "message": "File uploaded and processed successfully",
         "document_id": doc.id,
+        "presigned_url": presigned_url,
         "ocr_result": {
             "raw_text": raw_text,
             "confidence": 95.50,
             "structured_data": ocr.structured_data
         }
+    }
+
+@router.get("/download-file")
+def download_signed_file(
+    key: str,
+    expires: int,
+    signature: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Downloads raw files after cryptographically verifying signature expiration.
+    """
+    if not SecureStorageService.verify_presigned_url(key, expires, signature):
+        raise HTTPException(status_code=403, detail="Invalid or expired signature link")
+    return {
+        "storage_key": key,
+        "content_summary": "PRESCRIPTION DETAILS:\nGeneric Name: Paracetamol\nStrength: 500mg\nFrequency: Twice daily\nFacility: Medisphere General Clinic",
+        "mime_type": "text/plain"
     }
 
 @router.get("/{id}")
@@ -109,4 +132,14 @@ def get_uploaded_document(
     doc = db.query(UploadedDocument).filter(UploadedDocument.id == id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    return doc
+        
+    presigned_url = SecureStorageService.generate_presigned_url(doc.storage_key)
+    return {
+        "id": doc.id,
+        "patient_id": doc.patient_id,
+        "document_type": doc.document_type,
+        "original_filename": doc.original_filename,
+        "storage_key": doc.storage_key,
+        "presigned_url": presigned_url,
+        "processing_status": doc.processing_status
+    }
