@@ -205,6 +205,43 @@ const PatientDashboard: React.FC = () => {
     }
   }
 
+  const handleDownloadReport = async () => {
+    try {
+      const response = await axios.post('/api/v1/reports/generate', {
+        report_type: "ClinicalSummary",
+        status: "approved",
+        generated_content: {
+          title: "MediSphere AI - Clinical Care Plan",
+          urgency_rating: urgencyLevel,
+          three_column_care_plan: {
+            movements: patientReport.exercises.map((e: any) => e.name),
+            remedies: patientReport.remedies.map((r: any) => r.name),
+            medications: patientReport.medications.map((m: any) => m.generic_name)
+          }
+        }
+      })
+      const reportId = response.data.id
+      window.open(`/api/v1/reports/${reportId}/download`, '_blank')
+    } catch (err) {
+      console.warn("API report generation failed, running client-side markdown download fallback:", err)
+      const mdContent = `# MediSphere AI - Clinical Care Plan\n\n` +
+        `**Urgency Rating**: ${urgencyLevel.toUpperCase()}\n\n` +
+        `### Clinical Assessment:\n${escalationMsg}\n\n` +
+        `### Recommendations:\n` +
+        `*   **Movements**: ${patientReport.exercises.map((e: any) => e.name).join(', ') || 'None'}\n` +
+        `*   **Remedies**: ${patientReport.remedies.map((r: any) => r.name).join(', ') || 'None'}\n` +
+        `*   **Medications**: ${patientReport.medications.map((m: any) => m.generic_name).join(', ') || 'None'}\n\n` +
+        `---\n*Disclaimer: This care plan is generated for auxiliary assistance. Review with your physician.*`
+      
+      const blob = new Blob([mdContent], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `MediSphere_CarePlan_${urgencyLevel}.md`
+      link.click()
+    }
+  }
+
   return (
     <Layout>
       <div className="space-y-8">
@@ -245,7 +282,7 @@ const PatientDashboard: React.FC = () => {
                       </button>
                     </div>
                   </div>
-
+ 
                   <div>
                     <label className="block text-xs font-bold text-neutralGray-500 uppercase tracking-wider mb-2">What symptoms are you experiencing?</label>
                     {inputMode === 'text' ? (
@@ -273,7 +310,7 @@ const PatientDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
-
+ 
               <div className="pt-6">
                 <button 
                   onClick={startIntake}
@@ -284,7 +321,7 @@ const PatientDashboard: React.FC = () => {
                 </button>
               </div>
             </div>
-
+ 
             {/* Document / Prescription Upload Card */}
             <div className="bg-white border border-neutralGray-200 rounded-3xl p-8 shadow-sm h-full flex flex-col justify-between">
               <div>
@@ -306,7 +343,7 @@ const PatientDashboard: React.FC = () => {
                       <option value="DischargeSummary">Discharge Summary</option>
                     </select>
                   </div>
-
+ 
                   <div>
                     <label className="block text-xs font-bold text-neutralGray-500 uppercase tracking-wider mb-2">Select Report File (.txt / PDF)</label>
                     <input 
@@ -315,7 +352,7 @@ const PatientDashboard: React.FC = () => {
                       className="w-full text-xs text-neutralGray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-100 file:text-brand-700 hover:file:bg-brand-200 cursor-pointer"
                     />
                   </div>
-
+ 
                   <button 
                     type="submit"
                     disabled={uploading || !selectedFile}
@@ -332,7 +369,7 @@ const PatientDashboard: React.FC = () => {
                   </button>
                 </form>
               </div>
-
+ 
               {/* Upload Success Details */}
               {uploadSuccess && uploadedDoc && (
                 <div className="mt-6 bg-green-50 border border-green-200 rounded-2xl p-5 space-y-3">
@@ -353,10 +390,10 @@ const PatientDashboard: React.FC = () => {
                 </div>
               )}
             </div>
-
+ 
           </div>
         )}
-
+ 
         {/* 2. QUESTIONNAIRE SEQUENCE */}
         {inIntake && (
           <div className="bg-white border border-neutralGray-200 rounded-3xl p-8 shadow-sm max-w-2xl">
@@ -366,12 +403,12 @@ const PatientDashboard: React.FC = () => {
               </span>
               <span className="text-xs text-neutralGray-400 font-medium">Symptom Intake Sequence</span>
             </div>
-
+ 
             <div className="space-y-6">
               <h4 className="text-lg sm:text-xl font-bold text-neutralGray-900 leading-tight">
                 {questions[currentQIndex]?.text}
               </h4>
-
+ 
               <input 
                 type="text"
                 value={currentAnswer}
@@ -381,7 +418,7 @@ const PatientDashboard: React.FC = () => {
                 onKeyDown={e => { if (e.key === 'Enter') handleNextQuestion(); }}
                 autoFocus
               />
-
+ 
               <div className="flex justify-between items-center pt-4">
                 <button 
                   onClick={() => setInIntake(false)}
@@ -399,7 +436,7 @@ const PatientDashboard: React.FC = () => {
             </div>
           </div>
         )}
-
+ 
         {/* 3. ASSESSMENT TRIAGE RESULTS */}
         {showResults && (
           <div className="space-y-6">
@@ -411,7 +448,7 @@ const PatientDashboard: React.FC = () => {
                 </div>
                 <UrgencyBadge level={urgencyLevel} />
               </div>
-
+ 
               <div className="mt-6 space-y-4">
                 <div className="flex items-start space-x-2 text-sm text-neutralGray-600 bg-neutralGray-50 p-4 rounded-xl border border-neutralGray-200">
                   <AlertCircle className="h-5 w-5 text-neutralGray-500 flex-shrink-0 mt-0.5" />
@@ -420,7 +457,7 @@ const PatientDashboard: React.FC = () => {
                     <p className="mt-1 leading-relaxed">{escalationMsg}</p>
                   </div>
                 </div>
-
+ 
                 <div className="grid grid-cols-2 gap-4 text-sm mt-4">
                   <div className="border border-neutralGray-200 p-4 rounded-2xl">
                     <span className="text-xs font-bold text-neutralGray-400 uppercase tracking-wide">Main Symptom</span>
@@ -432,13 +469,20 @@ const PatientDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
-
+ 
               <div className="mt-8 flex space-x-3">
                 <button 
                   onClick={() => setShowResults(false)}
                   className="bg-brand-700 hover:bg-brand-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow transition-colors"
                 >
                   New Assessment
+                </button>
+                <button 
+                  onClick={handleDownloadReport}
+                  className="bg-neutralGray-900 hover:bg-neutralGray-800 text-white font-semibold px-5 py-2.5 rounded-xl shadow transition-colors flex items-center space-x-1.5"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Download Care Plan Report</span>
                 </button>
               </div>
             </div>
