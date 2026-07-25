@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import PatientDashboard from './pages/PatientDashboard'
 import DoctorDashboard from './pages/DoctorDashboard'
+import AdminDashboard from './pages/AdminDashboard'
 
 // Route protection component
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({ children, allowedRoles }) => {
@@ -46,6 +47,16 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute allowedRoles={['doctor']}>
                 <DoctorDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Protected Admin Routes */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDashboard />
               </ProtectedRoute>
             } 
           />
