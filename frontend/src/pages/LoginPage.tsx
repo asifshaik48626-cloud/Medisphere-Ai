@@ -17,10 +17,15 @@ const LoginPage: React.FC = () => {
     setError('')
 
     try {
-      // Attempt backend API login
-      const response = await axios.post('/api/v1/auth/login', {
-        username: username,
-        password: password
+      // Send parameters as form data to match OAuth2PasswordRequestForm
+      const params = new URLSearchParams()
+      params.append('username', username)
+      params.append('password', password)
+
+      const response = await axios.post('/api/v1/auth/login', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       })
       
       const { access_token, role: userRole } = response.data
