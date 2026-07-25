@@ -1,0 +1,15 @@
+[tool.ruff]
+# Target Python version
+target-version = "py311"
+
+# Enable Pyflakes (F) and pycodestyle (E, W) codes by default
+select = ["E", "F", "W", "I"]
+ignore = []
+
+# Line length restriction
+line-length = 120
+
+[tool.ruff.isort]
+# Configure imports sorting rules
+known-first-party = ["app"]
+combine-as-imports = true
