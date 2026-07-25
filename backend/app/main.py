@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .database import engine, Base
-from .routers import auth, patients, intakes, safety, care_plans, documents, reviews, guidelines
+from .routers import auth, patients, intakes, safety, care_plans, documents, reviews, guidelines, reports
 import uvicorn
 
 # Automatically initialize database schema for MVP local environment ease
@@ -33,6 +33,7 @@ app.include_router(care_plans.router, prefix=settings.API_V1_STR)
 app.include_router(documents.router, prefix=settings.API_V1_STR)
 app.include_router(reviews.router, prefix=settings.API_V1_STR)
 app.include_router(guidelines.router, prefix=settings.API_V1_STR)
+app.include_router(reports.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def read_root():
