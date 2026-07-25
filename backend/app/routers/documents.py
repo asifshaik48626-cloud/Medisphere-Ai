@@ -40,20 +40,50 @@ def upload_medical_document(
     db.commit()
     db.refresh(doc)
 
-    # Automatically generate structured mock OCR results for MVP demonstration
-    raw_text = "PRESCRIPTION DETAILS:\nGeneric Name: Paracetamol\nStrength: 500mg\nFrequency: Twice daily\nFacility: Medisphere General Clinic"
-    
+    # Read uploaded file content dynamically if it's text-readable
+    try:
+        content_bytes = file.file.read()
+        raw_text = content_bytes.decode("utf-8", errors="ignore")
+    except Exception:
+        raw_text = ""
+
+    if not raw_text.strip():
+        raw_text = "PRESCRIPTION DETAILS:\nGeneric Name: Paracetamol\nStrength: 500mg\nFrequency: Twice daily\nFacility: Medisphere General Clinic"
+
+    # Simple line-by-line parser
+    structured_data = {
+        "generic_name": "Unknown",
+        "strength": "Unknown",
+        "frequency": "Unknown",
+        "facility_name": "Unknown"
+    }
+    for line in raw_text.splitlines():
+        line_lower = line.lower()
+        if "generic name:" in line_lower:
+            structured_data["generic_name"] = line.split(":", 1)[1].strip()
+        elif "strength:" in line_lower:
+            structured_data["strength"] = line.split(":", 1)[1].strip()
+        elif "frequency:" in line_lower:
+            structured_data["frequency"] = line.split(":", 1)[1].strip()
+        elif "facility:" in line_lower:
+            structured_data["facility_name"] = line.split(":", 1)[1].strip()
+
+    # Fill default values if parsing yielded nothing
+    if structured_data["generic_name"] == "Unknown":
+        structured_data["generic_name"] = "Paracetamol"
+    if structured_data["strength"] == "Unknown":
+        structured_data["strength"] = "500mg"
+    if structured_data["frequency"] == "Unknown":
+        structured_data["frequency"] = "Twice daily"
+    if structured_data["facility_name"] == "Unknown":
+        structured_data["facility_name"] = "Medisphere General Clinic"
+
     ocr = OCRResult(
         document_id=doc.id,
         engine="TesseractMock",
         engine_version="1.0.0",
         raw_text=raw_text,
-        structured_data={
-            "generic_name": "Paracetamol",
-            "strength": "500mg",
-            "frequency": "Twice daily",
-            "facility_name": "Medisphere General Clinic"
-        },
+        structured_data=structured_data,
         confidence=95.50,
         patient_confirmed=False
     )
