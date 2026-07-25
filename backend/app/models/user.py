@@ -21,5 +21,5 @@ class User(Base):
 
     # Relationships
     patient_profile = relationship("PatientProfile", back_populates="user", uselist=False)
-    professional_profile = relationship("ProfessionalProfile", back_populates="user", uselist=False)
+    professional_profile = relationship("ProfessionalProfile", foreign_keys="ProfessionalProfile.user_id", back_populates="user", uselist=False)
     audit_logs = relationship("AuditLog", back_populates="actor_user")

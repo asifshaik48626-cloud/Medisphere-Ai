@@ -74,7 +74,8 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     if not user or not user.auth_provider_id or not user.auth_provider_id.startswith("local-hashed:"):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
         
-    hashed_pwd = user.auth_provider_id.split("local-hashed:")[1]
+    stored_val = user.auth_provider_id.replace("local-hashed:", "")
+    hashed_pwd = stored_val.split(":", 1)[1] if ":" in stored_val else stored_val
     if not verify_password(login_data.password, hashed_pwd):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
