@@ -34,8 +34,11 @@ def get_review_queue(
     
     return reviews
 
+from ..routers.websockets import manager
+from ..models.patient import PatientProfile
+
 @router.post("/{id}/approve")
-def approve_review(
+async def approve_review(
     id: str,
     comments: str = None,
     current_user: User = Depends(get_current_user),
@@ -55,10 +58,14 @@ def approve_review(
         review.comments = comments
 
     # Perform cascading updates on target entities
+    patient_user_id = None
     if review.entity_type == "CarePlan":
         plan = db.query(CarePlan).filter(CarePlan.id == review.entity_id).first()
         if plan:
             plan.status = "approved"
+            patient = db.query(PatientProfile).filter(PatientProfile.id == plan.patient_id).first()
+            if patient:
+                patient_user_id = patient.user_id
             
     elif review.entity_type == "Medication":
         med = db.query(CarePlanMedicationInformation).filter(CarePlanMedicationInformation.id == review.entity_id).first()
@@ -66,12 +73,27 @@ def approve_review(
             med.status = "approved"
             med.reviewed_by = current_user.id
             med.reviewed_at = datetime.utcnow()
+            # Try to get patient user id
+            plan = db.query(CarePlan).filter(CarePlan.id == med.care_plan_id).first()
+            if plan:
+                patient = db.query(PatientProfile).filter(PatientProfile.id == plan.patient_id).first()
+                if patient:
+                    patient_user_id = patient.user_id
 
     db.commit()
+
+    # Trigger async websocket notification if active
+    if patient_user_id:
+        await manager.send_personal_message({
+            "type": "care_plan_status",
+            "status": "approved",
+            "comments": comments or "Approved by medical professional."
+        }, str(patient_user_id))
+
     return {"status": "approved", "review_id": id}
 
 @router.post("/{id}/reject")
-def reject_review(
+async def reject_review(
     id: str,
     comments: str,
     current_user: User = Depends(get_current_user),
@@ -90,15 +112,33 @@ def reject_review(
     review.comments = comments
 
     # Update target entities
+    patient_user_id = None
     if review.entity_type == "CarePlan":
         plan = db.query(CarePlan).filter(CarePlan.id == review.entity_id).first()
         if plan:
             plan.status = "rejected"
+            patient = db.query(PatientProfile).filter(PatientProfile.id == plan.patient_id).first()
+            if patient:
+                patient_user_id = patient.user_id
             
     elif review.entity_type == "Medication":
         med = db.query(CarePlanMedicationInformation).filter(CarePlanMedicationInformation.id == review.entity_id).first()
         if med:
             med.status = "rejected"
+            plan = db.query(CarePlan).filter(CarePlan.id == med.care_plan_id).first()
+            if plan:
+                patient = db.query(PatientProfile).filter(PatientProfile.id == plan.patient_id).first()
+                if patient:
+                    patient_user_id = patient.user_id
 
     db.commit()
+
+    # Trigger async websocket notification if active
+    if patient_user_id:
+        await manager.send_personal_message({
+            "type": "care_plan_status",
+            "status": "rejected",
+            "comments": comments
+        }, str(patient_user_id))
+
     return {"status": "rejected", "review_id": id}

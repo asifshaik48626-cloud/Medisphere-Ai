@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Layout from '../components/Layout'
 import ThreeColumnResults from '../components/ThreeColumnResults'
 import { UrgencyBadge } from '../components/UrgencyBadge'
 import { MessageSquare, Mic, AlertCircle, FilePlus, ChevronRight, Check, UploadCloud, FileText, Loader2 } from 'lucide-react'
 import axios from 'axios'
+import { useAuth } from '../context/AuthContext'
 
 // Question lists
 const FEVER_QUESTIONS = [
@@ -19,9 +20,32 @@ const HEADACHE_QUESTIONS = [
 ]
 
 const PatientDashboard: React.FC = () => {
+  const { user } = useAuth()
+  const [notification, setNotification] = useState<any>(null)
   const [inIntake, setInIntake] = useState(false)
   const [complaint, setComplaint] = useState('')
   const [inputMode, setInputMode] = useState<'text' | 'voice'>('text')
+  
+  useEffect(() => {
+    if (!user) return
+    const wsUrl = `ws://${window.location.host.replace('3000', '8000')}/ws/notifications/${user.id}`
+    const ws = new WebSocket(wsUrl)
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === "care_plan_status") {
+          setNotification(data)
+        }
+      } catch (err) {
+        console.error("Failed to parse websocket message:", err)
+      }
+    }
+    
+    return () => {
+      ws.close()
+    }
+  }, [user])
   
   // Intake state
   const [questions, setQuestions] = useState<any[]>([])
@@ -249,6 +273,17 @@ const PatientDashboard: React.FC = () => {
           <h2 className="text-3xl font-extrabold tracking-tight text-neutralGray-950 font-sans">Patient Portal</h2>
           <p className="text-sm text-neutralGray-500 mt-1">Submit assessments, upload medical sheets, and track care plans</p>
         </div>
+
+        {/* Real-time Status Update Notification Toast */}
+        {notification && (
+          <div className="bg-brand-100 border border-brand-500 rounded-2xl p-5 text-sm text-brand-800 flex items-center justify-between shadow-sm transition-all animate-bounce">
+            <div>
+              <span className="font-bold uppercase tracking-wider text-[10px] text-brand-700 bg-brand-200 px-2 py-0.5 rounded mr-2">Update Alert</span>
+              <span>Your Care Plan review status was updated to: <strong className="uppercase text-brand-900">{notification.status}</strong>. Comments: <em>"{notification.comments}"</em></span>
+            </div>
+            <button onClick={() => setNotification(null)} className="font-bold hover:text-brand-900 text-xs ml-4">Dismiss</button>
+          </div>
+        )}
 
         {/* 1. START NEW ASSESSMENT & UPLOAD FORM */}
         {!inIntake && !showResults && (
