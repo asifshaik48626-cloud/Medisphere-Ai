@@ -3,8 +3,16 @@ name: MediSphere AI CI Pipeline
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
 
 jobs:
   # 1. Backend Testing Job
@@ -26,9 +34,8 @@ jobs:
 
     - name: Run Schema and Safety Database Verification
       run: |
-        python backend/app/seed.py
-        # Run local diagnostic test suites
-        # python scratch/test_db_and_safety.py
+        cd backend
+        PYTHONPATH=. python -m app.seed
 
   # 2. Frontend Build Job
   frontend-build:
